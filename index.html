@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>MFM Adeoyo Zonal HQ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://js.paystack.co/v1/inline.js"></script>
+<style>
+:root{
+  --ink:#0e1024;
+  --ink-2:#161a3a;
+  --ink-3:#1f2350;
+  --gold:#d4af37;
+  --gold-light:#f2d878;
+  --ember:#a8324a;
+  --cream:#f4efe4;
+  --cream-dim:#c8c4d6;
+  --line:rgba(212,175,55,0.18);
+  --font-display:'Cormorant Garamond', serif;
+  --font-body:'Sora', sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{
+  font-family:var(--font-body);
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(212,175,55,0.10), transparent),
+    radial-gradient(ellipse 60% 40% at 90% 100%, rgba(168,50,74,0.12), transparent),
+    var(--ink);
+  color:var(--cream);
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:inherit;text-decoration:none;}
+button{font-family:inherit;cursor:pointer;border:none;}
+input,textarea,select{font-family:inherit;}
+::-webkit-scrollbar{width:8px;}
+::-webkit-scrollbar-thumb{background:var(--ink-3);border-radius:4px;}
+
+.hidden{display:none !important;}
+
+/* ---------- AUTH SCREEN ---------- */
+#authScreen{
+  min-height:100vh;
+  display:flex;align-items:center;justify-content:center;
+  padding:24px;
+  position:relative;
+  overflow:hidden;
+}
+#authScreen::before{
+  content:'';
+  position:absolute;inset:0;
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size:48px 48px;
+  mask-image:radial-gradient(circle at 50% 40%, black, transparent 70%);
+  pointer-events:none;
+}
+.auth-card{
+  position:relative;
+  width:100%;max-width:420px;
+  background:linear-gradient(180deg, var(--ink-2), var(--ink-3));
+  border:1px solid var(--line);
+  border-radius:20px;
+  padding:40px 32px;
+  box-shadow:0 30px 80px rgba(0,0,0,0.5);
+}
+.auth-crest{
+  text-align:center;margin-bottom:8px;
+  font-family:var(--font-display);
+  color:var(--gold);
+  font-size:15px;letter-spacing:4px;text-transform:uppercase;
+  opacity:0.85;
+}
+.auth-title{
+  font-family:var(--font-display);
+  font-size:32px;font-weight:700;
+  text-align:center;color:var(--cream);
+  margin-bottom:4px;
+}
+.auth-sub{
+  text-align:center;color:var(--cream-dim);font-size:13px;margin-bottom:28px;
+}
+.auth-tabs{
+  display:flex;background:var(--ink);border-radius:12px;padding:4px;margin-bottom:24px;
+  border:1px solid var(--line);
+}
+.auth-tab{
+  flex:1;text-align:center;padding:10px;border-radius:9px;
+  color:var(--cream-dim);font-size:14px;font-weight:600;background:transparent;
+  transition:all .2s;
+}
+.auth-tab.active{background:var(--gold);color:var(--ink);}
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:12px;color:var(--cream-dim);margin-bottom:6px;letter-spacing:0.3px;}
+.field input{
+  width:100%;padding:12px 14px;background:var(--ink);
+  border:1px solid var(--line);border-radius:10px;color:var(--cream);font-size:14px;
+  outline:none;transition:border-color .2s;
+}
+.field input:focus{border-color:var(--gold);}
+.btn-primary{
+  width:100%;padding:13px;background:linear-gradient(135deg,var(--gold-light),var(--gold));
+  color:var(--ink);border-radius:10px;font-weight:700;font-size:14px;margin-top:6px;
+  letter-spacing:0.3px;
+}
+.btn-primary:disabled{opacity:0.6;}
+.auth-msg{font-size:12.5px;text-align:center;margin-top:12px;min-height:16px;}
+.auth-msg.err{color:#e8899a;}
+.auth-msg.ok{color:#8fd19e;}
+
+/* ---------- APP SHELL ---------- */
+#app{min-height:100vh;display:none;}
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 24px;border-bottom:1px solid var(--line);
+  background:rgba(14,16,36,0.85);backdrop-filter:blur(10px);
+  position:sticky;top:0;z-index:40;
+}
+.brand{display:flex;align-items:center;gap:10px;}
+.brand-mark{
+  width:36px;height:36px;border-radius:50%;
+  background:linear-gradient(135deg,var(--gold-light),var(--ember));
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-display);font-weight:700;color:var(--ink);font-size:17px;
+}
+.brand-text{font-family:var(--font-display);font-size:19px;font-weight:700;color:var(--cream);}
+.brand-text small{display:block;font-family:var(--font-body);font-size:10px;color:var(--gold);letter-spacing:1.5px;font-weight:600;}
+.desk-nav{display:none;gap:6px;}
+.desk-nav button{padding:9px 16px;border-radius:9px;color:var(--cream-dim);font-size:13.5px;font-weight:600;background:transparent;transition:all .2s;}
+.desk-nav button.active,.desk-nav button:hover{background:var(--ink-3);color:var(--gold-light);}
+.logout-btn{padding:8px 14px;border-radius:9px;background:var(--ink-3);color:var(--cream-dim);font-size:13px;font-weight:600;}
+
+main{max-width:960px;margin:0 auto;padding:24px 18px 100px;}
+.page{display:none;animation:fadeUp .35s ease;}
+.page.active{display:block;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+
+.hero{
+  background:linear-gradient(135deg, var(--ink-3), var(--ink-2));
+  border:1px solid var(--line);border-radius:20px;padding:32px 26px;margin-bottom:20px;
+  position:relative;overflow:hidden;
+}
+.hero::after{
+  content:'✦';position:absolute;right:20px;top:16px;font-size:60px;color:var(--gold);opacity:0.08;
+}
+.hero-eyebrow{color:var(--gold);font-size:12px;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:8px;}
+.hero h1{font-family:var(--font-display);font-size:30px;color:var(--cream);margin-bottom:8px;}
+.hero p{color:var(--cream-dim);font-size:14.5px;line-height:1.6;max-width:520px;}
+
+.card{
+  background:var(--ink-2);border:1px solid var(--line);border-radius:16px;
+  padding:20px;margin-bottom:16px;
+}
+.card-title{font-family:var(--font-display);font-size:20px;font-weight:700;color:var(--gold-light);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+
+.verse-card{
+  background:linear-gradient(135deg, rgba(212,175,55,0.10), rgba(168,50,74,0.08));
+  border:1px solid var(--line);border-radius:16px;padding:26px 22px;margin-bottom:20px;
+}
+.verse-card .label{font-size:11px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;font-weight:700;margin-bottom:10px;}
+.verse-text{font-family:var(--font-display);font-size:22px;line-height:1.5;color:var(--cream);font-style:italic;margin-bottom:10px;}
+.verse-ref{color:var(--gold-light);font-weight:600;font-size:14px;}
+
+.event-row,.announce-item{
+  padding:14px 0;border-bottom:1px solid var(--line);
+}
+.event-row:last-child,.announce-item:last-child{border-bottom:none;}
+.event-date-badge{
+  display:inline-flex;flex-direction:column;align-items:center;justify-content:center;
+  width:46px;height:46px;border-radius:10px;background:var(--ink-3);color:var(--gold-light);
+  font-weight:700;font-size:16px;line-height:1;flex-shrink:0;
+}
+.event-date-badge span{font-size:9px;color:var(--cream-dim);text-transform:uppercase;margin-top:2px;font-weight:600;}
+.event-row{display:flex;gap:14px;align-items:center;}
+.event-info h4{font-size:14.5px;color:var(--cream);margin-bottom:3px;}
+.event-info p{font-size:12.5px;color:var(--cream-dim);}
+.empty-state{color:var(--cream-dim);font-size:13.5px;text-align:center;padding:24px 0;}
+
+.announce-item h4{font-size:15.5px;color:var(--cream);margin-bottom:4px;}
+.announce-item p{font-size:13.5px;color:var(--cream-dim);line-height:1.6;margin-bottom:6px;}
+.announce-item .meta{font-size:11px;color:var(--gold);}
+
+/* GIVE PAGE */
+.give-account{
+  display:flex;justify-content:space-between;align-items:center;
+  background:var(--ink-3);border-radius:12px;padding:14px 16px;margin-bottom:10px;
+}
+.give-account .label{font-size:12px;color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;}
+.give-account .acct{font-size:16px;color:var(--cream);font-weight:700;letter-spacing:0.5px;}
+.give-account .bank{font-size:12.5px;color:var(--cream-dim);}
+.copy-btn{padding:8px 14px;background:var(--gold);color:var(--ink);border-radius:8px;font-size:12px;font-weight:700;}
+.project-card{background:var(--ink-3);border-radius:12px;padding:16px;margin-bottom:10px;}
+.project-card h4{font-family:var(--font-display);font-size:18px;color:var(--gold-light);margin-bottom:4px;}
+.project-card p{font-size:13px;color:var(--cream-dim);margin-bottom:8px;line-height:1.5;}
+.project-card .acct-line{font-size:12.5px;color:var(--cream);}
+
+.select-field, .textarea-field{
+  width:100%;padding:12px 14px;background:var(--ink);border:1px solid var(--line);
+  border-radius:10px;color:var(--cream);font-size:14px;outline:none;
+}
+.select-field:focus,.textarea-field:focus{border-color:var(--gold);}
+
+/* LIVE PAGE */
+.live-wrap{position:relative;width:100%;aspect-ratio:16/9;border-radius:16px;overflow:hidden;background:#000;border:1px solid var(--line);}
+.live-wrap iframe{width:100%;height:100%;border:0;}
+.live-off{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  height:100%;color:var(--cream-dim);text-align:center;padding:20px;
+}
+.live-off .dot{width:10px;height:10px;border-radius:50%;background:#555;}
+
+/* CHAT PAGE */
+.chat-rooms{display:flex;gap:8px;overflow-x:auto;margin-bottom:14px;padding-bottom:4px;}
+.chat-room-tab{padding:9px 16px;border-radius:20px;background:var(--ink-3);color:var(--cream-dim);font-size:13px;font-weight:600;white-space:nowrap;flex-shrink:0;}
+.chat-room-tab.active{background:var(--gold);color:var(--ink);}
+.chat-box{
+  background:var(--ink-2);border:1px solid var(--line);border-radius:16px;
+  height:calc(100vh - 340px);min-height:340px;display:flex;flex-direction:column;overflow:hidden;
+}
+.chat-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;}
+.msg{max-width:78%;}
+.msg .who{font-size:11px;color:var(--gold);font-weight:700;margin-bottom:3px;}
+.msg .bubble{background:var(--ink-3);padding:9px 13px;border-radius:14px 14px 14px 4px;font-size:13.5px;color:var(--cream);line-height:1.45;}
+.msg.mine{align-self:flex-end;}
+.msg.mine .who{text-align:right;}
+.msg.mine .bubble{background:linear-gradient(135deg,var(--gold-light),var(--gold));color:var(--ink);border-radius:14px 14px 4px 14px;}
+.chat-input-row{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line);}
+.chat-input-row input{flex:1;padding:11px 14px;background:var(--ink);border:1px solid var(--line);border-radius:20px;color:var(--cream);font-size:13.5px;outline:none;}
+.chat-input-row input:focus{border-color:var(--gold);}
+.send-btn{width:42px;height:42px;border-radius:50%;background:var(--gold);color:var(--ink);font-weight:700;flex-shrink:0;}
+
+/* BOTTOM NAV (mobile) */
+.bottom-nav{
+  position:fixed;bottom:0;left:0;right:0;
+  background:rgba(15,17,38,0.95);backdrop-filter:blur(12px);
+  border-top:1px solid var(--line);
+  display:flex;justify-content:space-around;padding:8px 4px calc(8px + env(safe-area-inset-bottom));
+  z-index:50;
+}
+.bottom-nav button{display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--cream-dim);font-size:9.5px;font-weight:600;background:transparent;padding:6px 8px;border-radius:10px;}
+.bottom-nav button.active{color:var(--gold-light);}
+.bottom-nav .ic{font-size:19px;}
+
+@media(min-width:760px){
+  .desk-nav{display:flex;}
+  .bottom-nav{display:none;}
+  main{padding-bottom:40px;}
+}
+
+/* ADMIN */
+.admin-tabs{display:flex;gap:8px;overflow-x:auto;margin-bottom:18px;}
+.admin-tab{padding:9px 15px;border-radius:9px;background:var(--ink-3);color:var(--cream-dim);font-size:12.5px;font-weight:600;white-space:nowrap;}
+.admin-tab.active{background:var(--gold);color:var(--ink);}
+.admin-panel{display:none;}
+.admin-panel.active{display:block;}
+.list-item{display:flex;justify-content:space-between;align-items:center;background:var(--ink-3);border-radius:10px;padding:12px 14px;margin-bottom:8px;}
+.list-item .info h5{font-size:13.5px;color:var(--cream);margin-bottom:2px;}
+.list-item .info p{font-size:11.5px;color:var(--cream-dim);}
+.mini-btn{padding:6px 11px;font-size:11px;font-weight:700;border-radius:7px;background:var(--ink);color:var(--cream-dim);margin-left:6px;}
+.mini-btn.danger{color:#e8899a;}
+.toggle-pill{padding:4px 10px;border-radius:20px;font-size:10.5px;font-weight:700;}
+.toggle-pill.on{background:rgba(143,209,158,0.15);color:#8fd19e;}
+.toggle-pill.off{background:rgba(232,137,154,0.15);color:#e8899a;}
+.admin-input{padding:12px;border-radius:10px;background:var(--ink);border:1px solid var(--line);color:var(--cream);width:100%;outline:none;}
+.admin-input:focus{border-color:var(--gold);}
+
+.toast{
+  position:fixed;bottom:90px;left:50%;transform:translateX(-50%);
+  background:var(--ink-3);border:1px solid var(--gold);color:var(--cream);
+  padding:11px 20px;border-radius:30px;font-size:13px;font-weight:600;
+  z-index:100;opacity:0;pointer-events:none;transition:opacity .25s, transform .25s;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(-8px);}
+</style>
+</head>
+<body>
+
+<!-- ============ AUTH SCREEN ============ -->
+<div id="authScreen">
+  <div class="auth-card">
+    <div class="auth-crest">✦ MFM ✦</div>
+    <div class="auth-title">Adeoyo Zonal HQ</div>
+    <div class="auth-sub">Sign in to access announcements, giving, live service &amp; chat</div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLoginBtn" onclick="switchAuthTab('login')">Login</button>
+      <button class="auth-tab" id="tabRegisterBtn" onclick="switchAuthTab('register')">Register</button>
+    </div>
+
+    <form id="loginForm">
+      <div class="field"><label>Email</label><input type="email" id="loginEmail" required></div>
+      <div class="field"><label>Password</label><input type="password" id="loginPassword" required></div>
+      <button type="submit" class="btn-primary" id="loginBtn">Sign In</button>
+      <div class="auth-msg" id="loginMsg"></div>
+    </form>
+
+    <form id="registerForm" class="hidden">
+      <div class="field"><label>Full Name</label><input type="text" id="regName" required></div>
+      <div class="field"><label>Phone</label><input type="tel" id="regPhone" required></div>
+      <div class="field"><label>Email</label><input type="email" id="regEmail" required></div>
+      <div class="field"><label>Password (min 6 characters)</label><input type="password" id="regPassword" minlength="6" required></div>
+      <button type="submit" class="btn-primary" id="registerBtn">Create Account</button>
+      <div class="auth-msg" id="registerMsg"></div>
+    </form>
+  </div>
+</div>
+
+<!-- ============ MAIN APP ============ -->
+<div id="app">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">M</div>
+      <div class="brand-text">MFM Adeoyo<small>ZONAL HQ</small></div>
+    </div>
+    <nav class="desk-nav" id="deskNav"></nav>
+    <button class="logout-btn" onclick="doLogout()">Logout</button>
+  </div>
+
+  <main>
+    <!-- HOME -->
+    <section class="page" id="page-home">
+      <div class="hero">
+        <div class="hero-eyebrow">Welcome, <span id="welcomeName">Beloved</span></div>
+        <h1>Grace to reign in your life this season 🙏</h1>
+        <p>Stay connected with your church family — read today's word, check upcoming programs, give as the Spirit leads, and join the conversation.</p>
+      </div>
+
+      <div class="verse-card">
+        <div class="label">Today's Bible Verse</div>
+        <div class="verse-text" id="verseText">Loading...</div>
+        <div class="verse-ref" id="verseRef"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📅 Upcoming Events</div>
+        <div id="eventsList"><div class="empty-state">Loading events…</div></div>
+      </div>
+    </section>
+
+    <!-- GIVE -->
+    <section class="page" id="page-give">
+      <div class="hero">
+        <div class="hero-eyebrow">Give</div>
+        <h1>Tithes, Offerings &amp; Projects</h1>
+        <p>"Bring ye all the tithes into the storehouse" — Malachi 3:10. Give directly via transfer or securely online.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🏦 Account Details</div>
+        <div id="givingAccountsList"><div class="empty-state">Loading…</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🏗️ Active Projects</div>
+        <div id="projectsList"><div class="empty-state">Loading…</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">💳 Give Online (Paystack)</div>
+        <div class="field">
+          <label>Purpose</label>
+          <select class="select-field" id="giveType">
+            <option value="">-- Select purpose --</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Amount (₦)</label>
+          <input type="number" min="100" id="giveAmount" placeholder="e.g. 5000" class="admin-input">
+        </div>
+        <button class="btn-primary" onclick="startPaystack()">Give Now</button>
+        <div class="auth-msg" id="giveMsg"></div>
+      </div>
+    </section>
+
+    <!-- ANNOUNCEMENTS -->
+    <section class="page" id="page-announce">
+      <div class="hero">
+        <div class="hero-eyebrow">Announcements</div>
+        <h1>Church Notices</h1>
+        <p>Everything you need to know, straight from the pulpit.</p>
+      </div>
+      <div class="card">
+        <div id="announceList"><div class="empty-state">Loading…</div></div>
+      </div>
+    </section>
+
+    <!-- LIVE -->
+    <section class="page" id="page-live">
+      <div class="hero">
+        <div class="hero-eyebrow">Live</div>
+        <h1 id="liveTitle">Sunday Service</h1>
+        <p>Join us live, wherever you are.</p>
+      </div>
+      <div class="live-wrap" id="liveWrap">
+        <div class="live-off"><div class="dot"></div><div>Checking stream status…</div></div>
+      </div>
+    </section>
+
+    <!-- CHAT -->
+    <section class="page" id="page-chat">
+      <div class="hero" style="padding:20px 22px;margin-bottom:16px;">
+        <div class="hero-eyebrow">Chat</div>
+        <h1 style="font-size:24px;">Fellowship Chat</h1>
+      </div>
+      <div class="chat-rooms" id="chatRooms"></div>
+      <div class="chat-box">
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="chat-input-row">
+          <input type="text" id="chatInput" placeholder="Type a message…" onkeydown="if(event.key==='Enter')sendChatMessage()">
+          <button class="send-btn" onclick="sendChatMessage()">➤</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ADMIN -->
+    <section class="page" id="page-admin">
+      <div class="hero">
+        <div class="hero-eyebrow">Admin</div>
+        <h1>Church Management</h1>
+        <p>Post announcements, manage giving accounts, projects, events &amp; live stream.</p>
+      </div>
+
+      <div class="admin-tabs">
+        <button class="admin-tab active" onclick="switchAdminTab('announce', this)">Announcements</button>
+        <button class="admin-tab" onclick="switchAdminTab('events', this)">Events</button>
+        <button class="admin-tab" onclick="switchAdminTab('giving', this)">Giving Accounts</button>
+        <button class="admin-tab" onclick="switchAdminTab('projects', this)">Projects</button>
+        <button class="admin-tab" onclick="switchAdminTab('live', this)">Live Stream</button>
+        <button class="admin-tab" onclick="switchAdminTab('donations', this)">Donations</button>
+      </div>
+
+      <!-- Announcements admin -->
+      <div class="admin-panel active" id="admin-announce">
+        <div class="card">
+          <div class="card-title">Post New Announcement</div>
+          <div class="field"><label>Title</label><input type="text" id="anTitle" class="admin-input"></div>
+          <div class="field"><label>Content</label><textarea id="anContent" rows="4" class="textarea-field"></textarea></div>
+          <button class="btn-primary" onclick="postAnnouncement()">Post Announcement</button>
+        </div>
+        <div class="card"><div class="card-title">Existing Announcements</div><div id="adminAnnounceList"></div></div>
+      </div>
+
+      <!-- Events admin -->
+      <div class="admin-panel" id="admin-events">
+        <div class="card">
+          <div class="card-title">Add New Event</div>
+          <div class="field"><label>Title</label><input type="text" id="evTitle" class="admin-input"></div>
+          <div class="field"><label>Description</label><textarea id="evDesc" rows="2" class="textarea-field"></textarea></div>
+          <div class="field"><label>Date &amp; Time</label><input type="datetime-local" id="evDate" class="admin-input"></div>
+          <div class="field"><label>Location</label><input type="text" id="evLocation" class="admin-input"></div>
+          <button class="btn-primary" onclick="addEvent()">Add Event</button>
+        </div>
+        <div class="card"><div class="card-title">Upcoming Events</div><div id="adminEventsList"></div></div>
+      </div>
+
+      <!-- Giving admin -->
+      <div class="admin-panel" id="admin-giving">
+        <div class="card">
+          <div class="card-title">Add Giving Account</div>
+          <div class="field"><label>Label (e.g. Tithe, Offering)</label><input type="text" id="gaLabel" class="admin-input"></div>
+          <div class="field"><label>Bank Name</label><input type="text" id="gaBank" class="admin-input"></div>
+          <div class="field"><label>Account Number</label><input type="text" id="gaNumber" class="admin-input"></div>
+          <div class="field"><label>Account Name</label><input type="text" id="gaName" class="admin-input"></div>
+          <button class="btn-primary" onclick="addGivingAccount()">Add Account</button>
+        </div>
+        <div class="card"><div class="card-title">Existing Accounts</div><div id="adminGivingList"></div></div>
+      </div>
+
+      <!-- Projects admin -->
+      <div class="admin-panel" id="admin-projects">
+        <div class="card">
+          <div class="card-title">Add Project</div>
+          <div class="field"><label>Project Name</label><input type="text" id="prName" class="admin-input"></div>
+          <div class="field"><label>Description</label><textarea id="prDesc" rows="2" class="textarea-field"></textarea></div>
+          <div class="field"><label>Bank Name</label><input type="text" id="prBank" class="admin-input"></div>
+          <div class="field"><label>Account Number</label><input type="text" id="prNumber" class="admin-input"></div>
+          <div class="field"><label>Account Name</label><input type="text" id="prAcctName" class="admin-input"></div>
+          <div class="field"><label>Target Amount (optional, ₦)</label><input type="number" id="prTarget" class="admin-input"></div>
+          <button class="btn-primary" onclick="addProject()">Add Project</button>
+        </div>
+        <div class="card"><div class="card-title">Existing Projects</div><div id="adminProjectsList"></div></div>
+      </div>
+
+      <!-- Live admin -->
+      <div class="admin-panel" id="admin-live">
+        <div class="card">
+          <div class="card-title">Live Stream Settings</div>
+          <div class="field"><label>Stream Title</label><input type="text" id="liveTitleInput" class="admin-input"></div>
+          <div class="field">
+            <label>Platform</label>
+            <select id="livePlatform" class="select-field">
+              <option value="youtube">YouTube</option>
+              <option value="facebook">Facebook</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Video/Watch URL</label>
+            <input type="text" id="liveUrl" class="admin-input" placeholder="e.g. https://www.youtube.com/watch?v=xxxx or Facebook video URL">
+          </div>
+          <div class="field">
+            <label>Status</label>
+            <select id="liveStatus" class="select-field">
+              <option value="false">Offline</option>
+              <option value="true">Live Now</option>
+            </select>
+          </div>
+          <button class="btn-primary" onclick="saveLiveSettings()">Save Live Settings</button>
+        </div>
+      </div>
+
+      <!-- Donations admin -->
+      <div class="admin-panel" id="admin-donations">
+        <div class="card">
+          <div class="card-title">Recent Donations</div>
+          <div id="adminDonationsList"><div class="empty-state">Loading…</div></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav" id="bottomNav"></nav>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   CONFIG — fill these in before deploying (see SETUP.md)
+   ========================================================= */
+const SUPABASE_URL = "https://oddinigeevsunzgxibub.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9kZGluaWdlZXZzdW56Z3hpYnViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ0ODIyMjcsImV4cCI6MjEwMDA1ODIyN30._KsETcuO1p6xHszn-zre-Vtmt_0o5C1Z2GNXc7knRMk";
+const PAYSTACK_PUBLIC_KEY = "YOUR_PAYSTACK_PUBLIC_KEY";
+
+const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let currentUser = null;
+let currentProfile = null;
+let currentPage = 'home';
+let currentChatRoom = null;
+let chatRooms = [];
+let chatChannel = null;
+
+const NAV_ITEMS = [
+  {key:'home', label:'Home', icon:'🏠'},
+  {key:'give', label:'Give', icon:'💝'},
+  {key:'announce', label:'Notices', icon:'📢'},
+  {key:'live', label:'Live', icon:'📺'},
+  {key:'chat', label:'Chat', icon:'💬'},
+];
+
+/* ---------------- BIBLE VERSES (KJV, public domain) ---------------- */
+const VERSES = [
+  {ref:"John 3:16", text:"For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life."},
+  {ref:"Jeremiah 29:11", text:"For I know the thoughts that I think toward you, saith the LORD, thoughts of peace, and not of evil, to give you an expected end."},
+  {ref:"Philippians 4:13", text:"I can do all things through Christ which strengtheneth me."},
+  {ref:"Psalm 23:1", text:"The LORD is my shepherd; I shall not want."},
+  {ref:"Proverbs 3:5-6", text:"Trust in the LORD with all thine heart; and lean not unto thine own understanding. In all thy ways acknowledge him, and he shall direct thy paths."},
+  {ref:"Isaiah 41:10", text:"Fear thou not; for I am with thee: be not dismayed; for I am thy God: I will strengthen thee; yea, I will help thee."},
+  {ref:"Romans 8:28", text:"And we know that all things work together for good to them that love God, to them who are the called according to his purpose."},
+  {ref:"Psalm 46:1", text:"God is our refuge and strength, a very present help in trouble."},
+  {ref:"Joshua 1:9", text:"Have not I commanded thee? Be strong and of a good courage; be not afraid, neither be thou dismayed: for the LORD thy God is with thee whithersoever thou goest."},
+  {ref:"Matthew 6:33", text:"But seek ye first the kingdom of God, and his righteousness; and all these things shall be added unto you."},
+  {ref:"2 Corinthians 5:17", text:"Therefore if any man be in Christ, he is a new creature: old things are passed away; behold, all things are become new."},
+  {ref:"Psalm 91:1", text:"He that dwelleth in the secret place of the most High shall abide under the shadow of the Almighty."},
+  {ref:"Malachi 3:10", text:"Bring ye all the tithes into the storehouse, that there may be meat in mine house, and prove me now herewith, saith the LORD of hosts, if I will not open you the windows of heaven, and pour you out a blessing."},
+  {ref:"Psalm 34:4", text:"I sought the LORD, and he heard me, and delivered me from all my fears."},
+  {ref:"Isaiah 54:17", text:"No weapon that is formed against thee shall prosper; and every tongue that shall rise against thee in judgment thou shalt condemn."},
+  {ref:"Romans 12:2", text:"And be not conformed to this world: but be ye transformed by the renewing of your mind, that ye may prove what is that good, and acceptable, and perfect, will of God."},
+  {ref:"Psalm 27:1", text:"The LORD is my light and my salvation; whom shall I fear? the LORD is the strength of my life; of whom shall I be afraid?"},
+  {ref:"Deuteronomy 31:6", text:"Be strong and of a good courage, fear not, nor be afraid of them: for the LORD thy God, he it is that doth go with thee; he will not fail thee, nor forsake thee."},
+  {ref:"1 Peter 5:7", text:"Casting all your care upon him; for he careth for you."},
+  {ref:"Psalm 121:2", text:"My help cometh from the LORD, which made heaven and earth."},
+];
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+/* ---------------- AUTH ---------------- */
+function switchAuthTab(tab){
+  document.getElementById('tabLoginBtn').classList.toggle('active', tab==='login');
+  document.getElementById('tabRegisterBtn').classList.toggle('active', tab==='register');
+  document.getElementById('loginForm').classList.toggle('hidden', tab!=='login');
+  document.getElementById('registerForm').classList.toggle('hidden', tab!=='register');
+}
+
+document.getElementById('loginForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const btn = document.getElementById('loginBtn');
+  const msg = document.getElementById('loginMsg');
+  btn.disabled = true; msg.textContent=''; msg.className='auth-msg';
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const {data, error} = await supa.auth.signInWithPassword({email, password});
+  btn.disabled = false;
+  if(error){ msg.textContent = error.message; msg.className='auth-msg err'; return; }
+  await onAuthed(data.user);
+});
+
+document.getElementById('registerForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const btn = document.getElementById('registerBtn');
+  const msg = document.getElementById('registerMsg');
+  btn.disabled = true; msg.textContent=''; msg.className='auth-msg';
+  const full_name = document.getElementById('regName').value.trim();
+  const phone = document.getElementById('regPhone').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const password = document.getElementById('regPassword').value;
+  const {data, error} = await supa.auth.signUp({
+    email, password,
+    options:{ data: { full_name } }
+  });
+  btn.disabled = false;
+  if(error){ msg.textContent = error.message; msg.className='auth-msg err'; return; }
+  if(data.user && data.user.identities && data.user.identities.length === 0){
+    msg.textContent = 'This email is already registered. Please login.';
+    msg.className='auth-msg err';
+    return;
+  }
+  if(data.session){
+    await supa.from('profiles').update({phone}).eq('id', data.user.id);
+    await onAuthed(data.user);
+  } else {
+    msg.textContent = 'Account created! Check your email to confirm, then login.';
+    msg.className='auth-msg ok';
+    switchAuthTab('login');
+  }
+});
+
+async function onAuthed(user){
+  currentUser = user;
+  let {data: profile} = await supa.from('profiles').select('*').eq('id', user.id).single();
+  if(!profile){
+    await new Promise(r=>setTimeout(r,800));
+    const retry = await supa.from('profiles').select('*').eq('id', user.id).single();
+    profile = retry.data;
+  }
+  currentProfile = profile;
+  document.getElementById('authScreen').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('welcomeName').textContent = profile?.full_name?.split(' ')[0] || 'Beloved';
+  buildNav();
+  goPage('home');
+  loadEvents();
+  loadGivingAccounts();
+  loadProjects();
+  loadAnnouncements();
+  loadLiveSettings();
+  loadChatRooms();
+}
+
+async function doLogout(){
+  if(chatChannel) supa.removeChannel(chatChannel);
+  await supa.auth.signOut();
+  currentUser = null; currentProfile = null;
+  document.getElementById('app').style.display='none';
+  document.getElementById('authScreen').style.display='flex';
+}
+
+(async ()=>{
+  const {data:{session}} = await supa.auth.getSession();
+  if(session?.user) await onAuthed(session.user);
+})();
+
+/* ---------------- NAV ---------------- */
+function buildNav(){
+  const items = [...NAV_ITEMS];
+  if(currentProfile?.is_admin) items.push({key:'admin', label:'Admin', icon:'⚙️'});
+
+  const deskNav = document.getElementById('deskNav');
+  deskNav.innerHTML = items.map(i=>`<button data-page="${i.key}" onclick="goPage('${i.key}')">${i.label}</button>`).join('');
+
+  const bottomNav = document.getElementById('bottomNav');
+  bottomNav.innerHTML = items.map(i=>`<button data-page="${i.key}" onclick="goPage('${i.key}')"><span class="ic">${i.icon}</span>${i.label}</button>`).join('');
+}
+
+function goPage(key){
+  currentPage = key;
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+key).classList.add('active');
+  document.querySelectorAll('#deskNav button, #bottomNav button').forEach(b=>{
+    b.classList.toggle('active', b.dataset.page === key);
+  });
+  if(key==='chat' && currentChatRoom) subscribeToRoom(currentChatRoom);
+  if(key==='admin') refreshAdminData();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+/* ---------------- HOME: verse + events ---------------- */
+function loadVerse(){
+  const dayIndex = Math.floor(Date.now() / 86400000) % VERSES.length;
+  const v = VERSES[dayIndex];
+  document.getElementById('verseText').textContent = '"' + v.text + '"';
+  document.getElementById('verseRef').textContent = '— ' + v.ref;
+}
+loadVerse();
+
+async function loadEvents(){
+  const {data, error} = await supa.from('events').select('*').gte('event_date', new Date().toISOString()).order('event_date',{ascending:true}).limit(6);
+  const el = document.getElementById('eventsList');
+  if(error || !data || data.length===0){ el.innerHTML = '<div class="empty-state">No upcoming events yet.</div>'; return; }
+  el.innerHTML = data.map(ev=>{
+    const d = new Date(ev.event_date);
+    const day = d.getDate();
+    const mon = d.toLocaleString('en',{month:'short'});
+    return `<div class="event-row">
+      <div class="event-date-badge">${day}<span>${mon}</span></div>
+      <div class="event-info">
+        <h4>${escapeHtml(ev.title)}</h4>
+        <p>${escapeHtml(ev.location||'')} ${ev.location ? '· ':''}${d.toLocaleString('en',{weekday:'short',hour:'2-digit',minute:'2-digit'})}</p>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ---------------- GIVE ---------------- */
+async function loadGivingAccounts(){
+  const {data, error} = await supa.from('giving_accounts').select('*').eq('is_active', true).order('sort_order');
+  const el = document.getElementById('givingAccountsList');
+  const select = document.getElementById('giveType');
+  select.innerHTML = '<option value="">-- Select purpose --</option>';
+  if(error || !data || data.length===0){ el.innerHTML = '<div class="empty-state">No accounts published yet.</div>'; }
+  else{
+    el.innerHTML = data.map(a=>`
+      <div class="give-account">
+        <div>
+          <div class="label">${escapeHtml(a.label)}</div>
+          <div class="acct">${escapeHtml(a.account_number)}</div>
+          <div class="bank">${escapeHtml(a.bank_name)} · ${escapeHtml(a.account_name)}</div>
+        </div>
+        <button class="copy-btn" onclick="copyText('${a.account_number}')">Copy</button>
+      </div>`).join('');
+    data.forEach(a=> select.innerHTML += `<option value="giving:${a.label}">${escapeHtml(a.label)}</option>`);
+  }
+}
+
+async function loadProjects(){
+  const {data, error} = await supa.from('projects').select('*').eq('is_active', true).order('created_at',{ascending:false});
+  const el = document.getElementById('projectsList');
+  const select = document.getElementById('giveType');
+  if(error || !data || data.length===0){ el.innerHTML = '<div class="empty-state">No active projects right now.</div>'; return; }
+  el.innerHTML = data.map(p=>`
+    <div class="project-card">
+      <h4>${escapeHtml(p.name)}</h4>
+      <p>${escapeHtml(p.description||'')}</p>
+      <div class="acct-line">${escapeHtml(p.bank_name)} · ${escapeHtml(p.account_number)} · ${escapeHtml(p.account_name)}</div>
+      ${p.target_amount ? `<div class="acct-line" style="margin-top:4px;color:var(--gold-light);">Target: ₦${Number(p.target_amount).toLocaleString()}</div>` : ''}
+    </div>`).join('');
+  data.forEach(p=> select.innerHTML += `<option value="project:${p.name}">${escapeHtml(p.name)} (Project)</option>`);
+}
+
+function copyText(t){
+  navigator.clipboard.writeText(t).then(()=>toast('Account number copied!'));
+}
+
+function startPaystack(){
+  const purpose = document.getElementById('giveType').value;
+  const amount = parseFloat(document.getElementById('giveAmount').value);
+  const msg = document.getElementById('giveMsg');
+  msg.className='auth-msg';
+  if(!purpose){ msg.textContent='Please select a purpose.'; msg.className='auth-msg err'; return; }
+  if(!amount || amount < 100){ msg.textContent='Enter a valid amount (min ₦100).'; msg.className='auth-msg err'; return; }
+  if(PAYSTACK_PUBLIC_KEY.includes('YOUR_')){ msg.textContent='Paystack key not configured yet — contact admin.'; msg.className='auth-msg err'; return; }
+
+  const handler = PaystackPop.setup({
+    key: PAYSTACK_PUBLIC_KEY,
+    email: currentUser.email,
+    amount: Math.round(amount * 100),
+    ref: 'MFM' + Date.now(),
+    metadata: { purpose, full_name: currentProfile?.full_name },
+    callback: function(response){
+      supa.from('donations').insert({
+        user_id: currentUser.id,
+        amount: amount,
+        purpose: purpose,
+        paystack_reference: response.reference,
+        status: 'success'
+      }).then(()=>{
+        toast('Thank you for your giving! 🙏');
+        document.getElementById('giveAmount').value='';
+      });
+    },
+    onClose: function(){ msg.textContent='Payment window closed.'; }
+  });
+  handler.openIframe();
+}
+
+/* ---------------- ANNOUNCEMENTS ---------------- */
+async function loadAnnouncements(){
+  const {data, error} = await supa.from('announcements').select('*').order('created_at',{ascending:false}).limit(30);
+  const el = document.getElementById('announceList');
+  if(error || !data || data.length===0){ el.innerHTML = '<div class="empty-state">No announcements yet.</div>'; return; }
+  el.innerHTML = data.map(a=>`
+    <div class="announce-item">
+      <h4>${escapeHtml(a.title)}</h4>
+      <p>${escapeHtml(a.content)}</p>
+      <div class="meta">${new Date(a.created_at).toLocaleString('en',{dateStyle:'medium',timeStyle:'short'})}</div>
+    </div>`).join('');
+}
+
+/* ---------------- LIVE ---------------- */
+function youtubeEmbedUrl(url){
+  let id = '';
+  const m1 = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/live\/)([a-zA-Z0-9_-]{6,})/);
+  if(m1) id = m1[1];
+  if(!id) return null;
+  return `https://www.youtube.com/embed/${id}?autoplay=1&mute=0`;
+}
+function facebookEmbedUrl(url){
+  return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=false&autoplay=true`;
+}
+
+async function loadLiveSettings(){
+  const {data, error} = await supa.from('live_settings').select('*').eq('id',1).single();
+  const wrap = document.getElementById('liveWrap');
+  if(error || !data){ wrap.innerHTML = '<div class="live-off"><div class="dot"></div><div>Unable to load stream.</div></div>'; return; }
+  document.getElementById('liveTitle').textContent = data.title || 'Live Service';
+  if(data.is_live && data.embed_url){
+    let src = data.platform === 'facebook' ? facebookEmbedUrl(data.embed_url) : youtubeEmbedUrl(data.embed_url);
+    if(!src){ wrap.innerHTML = '<div class="live-off"><div>Invalid stream URL.</div></div>'; return; }
+    wrap.innerHTML = `<iframe src="${src}" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>`;
+  } else {
+    wrap.innerHTML = `<div class="live-off">
+      <div class="dot"></div>
+      <div style="font-size:15px;font-weight:600;color:var(--cream);">We're not live right now</div>
+      <div style="font-size:12.5px;">Check back during service hours, or watch our announcements page for the schedule.</div>
+    </div>`;
+  }
+}
+
+/* ---------------- CHAT ---------------- */
+async function loadChatRooms(){
+  const {data} = await supa.from('chat_rooms').select('*').order('sort_order');
+  chatRooms = data || [];
+  const el = document.getElementById('chatRooms');
+  el.innerHTML = chatRooms.map(r=>`<button class="chat-room-tab" data-room="${r.id}" onclick="switchChatRoom('${r.id}')">${escapeHtml(r.name)}</button>`).join('');
+  if(chatRooms.length){ switchChatRoom(chatRooms[0].id); }
+}
+
+async function switchChatRoom(roomId){
+  currentChatRoom = roomId;
+  document.querySelectorAll('.chat-room-tab').forEach(b=> b.classList.toggle('active', b.dataset.room === roomId));
+  await loadChatMessages(roomId);
+  subscribeToRoom(roomId);
+}
+
+async function loadChatMessages(roomId){
+  const el = document.getElementById('chatMessages');
+  el.innerHTML = '<div class="empty-state">Loading messages…</div>';
+  const {data, error} = await supa
+    .from('chat_messages')
+    .select('*, profiles(full_name)')
+    .eq('room_id', roomId)
+    .order('created_at',{ascending:true})
+    .limit(100);
+  if(error || !data){ el.innerHTML = '<div class="empty-state">No messages yet. Say hello! 👋</div>'; return; }
+  el.innerHTML = data.map(renderMsg).join('') || '<div class="empty-state">No messages yet. Say hello! 👋</div>';
+  el.scrollTop = el.scrollHeight;
+}
+
+function renderMsg(m){
+  const mine = m.user_id === currentUser.id;
+  const name = m.profiles?.full_name || 'Member';
+  return `<div class="msg ${mine?'mine':''}">
+    <div class="who">${mine ? 'You' : escapeHtml(name)}</div>
+    <div class="bubble">${escapeHtml(m.message)}</div>
+  </div>`;
+}
+
+function subscribeToRoom(roomId){
+  if(chatChannel){ supa.removeChannel(chatChannel); chatChannel = null; }
+  chatChannel = supa.channel('room-'+roomId)
+    .on('postgres_changes', {event:'INSERT', schema:'public', table:'chat_messages', filter:`room_id=eq.${roomId}`}, async (payload)=>{
+      const {data: prof} = await supa.from('profiles').select('full_name').eq('id', payload.new.user_id).single();
+      const el = document.getElementById('chatMessages');
+      el.insertAdjacentHTML('beforeend', renderMsg({...payload.new, profiles: prof}));
+      el.scrollTop = el.scrollHeight;
+    })
+    .subscribe();
+}
+
+async function sendChatMessage(){
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if(!text || !currentChatRoom) return;
+  input.value = '';
+  const {error} = await supa.from('chat_messages').insert({room_id: currentChatRoom, user_id: currentUser.id, message: text});
+  if(error) toast('Message failed to send.');
+}
+
+/* ---------------- ADMIN ---------------- */
+function switchAdminTab(tab, btnEl){
+  document.querySelectorAll('.admin-tab').forEach(b=>b.classList.remove('active'));
+  btnEl.classList.add('active');
+  document.querySelectorAll('.admin-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('admin-'+tab).classList.add('active');
+}
+
+function refreshAdminData(){
+  if(!currentProfile?.is_admin) return;
+  loadAdminAnnouncements();
+  loadAdminEvents();
+  loadAdminGiving();
+  loadAdminProjects();
+  loadAdminDonations();
+  loadLiveSettingsIntoForm();
+}
+
+async function postAnnouncement(){
+  const title = document.getElementById('anTitle').value.trim();
+  const content = document.getElementById('anContent').value.trim();
+  if(!title || !content){ toast('Fill in title and content.'); return; }
+  const {error} = await supa.from('announcements').insert({title, content, created_by: currentUser.id});
+  if(error){ toast('Error: '+error.message); return; }
+  document.getElementById('anTitle').value=''; document.getElementById('anContent').value='';
+  toast('Announcement posted!');
+  loadAdminAnnouncements(); loadAnnouncements();
+}
+async function loadAdminAnnouncements(){
+  const {data} = await supa.from('announcements').select('*').order('created_at',{ascending:false}).limit(20);
+  const el = document.getElementById('adminAnnounceList');
+  el.innerHTML = (data||[]).map(a=>`
+    <div class="list-item">
+      <div class="info"><h5>${escapeHtml(a.title)}</h5><p>${new Date(a.created_at).toLocaleDateString()}</p></div>
+      <div><button class="mini-btn danger" onclick="deleteRow('announcements','${a.id}', loadAdminAnnouncements)">Delete</button></div>
+    </div>`).join('') || '<div class="empty-state">None yet.</div>';
+}
+
+async function addEvent(){
+  const title = document.getElementById('evTitle').value.trim();
+  const description = document.getElementById('evDesc').value.trim();
+  const event_date = document.getElementById('evDate').value;
+  const location = document.getElementById('evLocation').value.trim();
+  if(!title || !event_date){ toast('Title and date required.'); return; }
+  const {error} = await supa.from('events').insert({title, description, event_date: new Date(event_date).toISOString(), location});
+  if(error){ toast('Error: '+error.message); return; }
+  ['evTitle','evDesc','evDate','evLocation'].forEach(id=>document.getElementById(id).value='');
+  toast('Event added!');
+  loadAdminEvents(); loadEvents();
+}
+async function loadAdminEvents(){
+  const {data} = await supa.from('events').select('*').order('event_date',{ascending:false}).limit(20);
+  const el = document.getElementById('adminEventsList');
+  el.innerHTML = (data||[]).map(ev=>`
+    <div class="list-item">
+      <div class="info"><h5>${escapeHtml(ev.title)}</h5><p>${new Date(ev.event_date).toLocaleString()}</p></div>
+      <div><button class="mini-btn danger" onclick="deleteRow('events','${ev.id}', loadAdminEvents)">Delete</button></div>
+    </div>`).join('') || '<div class="empty-state">None yet.</div>';
+}
+
+async function addGivingAccount(){
+  const label = document.getElementById('gaLabel').value.trim();
+  const bank_name = document.getElementById('gaBank').value.trim();
+  const account_number = document.getElementById('gaNumber').value.trim();
+  const account_name = document.getElementById('gaName').value.trim();
+  if(!label || !bank_name || !account_number || !account_name){ toast('Fill all fields.'); return; }
+  const {error} = await supa.from('giving_accounts').insert({label, bank_name, account_number, account_name});
+  if(error){ toast('Error: '+error.message); return; }
+  ['gaLabel','gaBank','gaNumber','gaName'].forEach(id=>document.getElementById(id).value='');
+  toast('Account added!');
+  loadAdminGiving(); loadGivingAccounts();
+}
+async function loadAdminGiving(){
+  const {data} = await supa.from('giving_accounts').select('*').order('sort_order');
+  const el = document.getElementById('adminGivingList');
+  el.innerHTML = (data||[]).map(a=>`
+    <div class="list-item">
+      <div class="info"><h5>${escapeHtml(a.label)}</h5><p>${escapeHtml(a.account_number)} · ${escapeHtml(a.bank_name)}</p></div>
+      <div>
+        <span class="toggle-pill ${a.is_active?'on':'off'}" style="cursor:pointer" onclick="toggleActive('giving_accounts','${a.id}',${a.is_active}, loadAdminGiving)">${a.is_active?'Active':'Hidden'}</span>
+        <button class="mini-btn danger" onclick="deleteRow('giving_accounts','${a.id}', loadAdminGiving)">Delete</button>
+      </div>
+    </div>`).join('') || '<div class="empty-state">None yet.</div>';
+}
+
+async function addProject(){
+  const name = document.getElementById('prName').value.trim();
+  const description = document.getElementById('prDesc').value.trim();
+  const bank_name = document.getElementById('prBank').value.trim();
+  const account_number = document.getElementById('prNumber').value.trim();
+  const account_name = document.getElementById('prAcctName').value.trim();
+  const target_amount = document.getElementById('prTarget').value || null;
+  if(!name || !bank_name || !account_number || !account_name){ toast('Fill required fields.'); return; }
+  const {error} = await supa.from('projects').insert({name, description, bank_name, account_number, account_name, target_amount});
+  if(error){ toast('Error: '+error.message); return; }
+  ['prName','prDesc','prBank','prNumber','prAcctName','prTarget'].forEach(id=>document.getElementById(id).value='');
+  toast('Project added!');
+  loadAdminProjects(); loadProjects();
+}
+async function loadAdminProjects(){
+  const {data} = await supa.from('projects').select('*').order('created_at',{ascending:false});
+  const el = document.getElementById('adminProjectsList');
+  el.innerHTML = (data||[]).map(p=>`
+    <div class="list-item">
+      <div class="info"><h5>${escapeHtml(p.name)}</h5><p>${escapeHtml(p.account_number)} · ${escapeHtml(p.bank_name)}</p></div>
+      <div>
+        <span class="toggle-pill ${p.is_active?'on':'off'}" style="cursor:pointer" onclick="toggleActive('projects','${p.id}',${p.is_active}, loadAdminProjects)">${p.is_active?'Active':'Hidden'}</span>
+        <button class="mini-btn danger" onclick="deleteRow('projects','${p.id}', loadAdminProjects)">Delete</button>
+      </div>
+    </div>`).join('') || '<div class="empty-state">None yet.</div>';
+}
+
+async function loadLiveSettingsIntoForm(){
+  const {data} = await supa.from('live_settings').select('*').eq('id',1).single();
+  if(!data) return;
+  document.getElementById('liveTitleInput').value = data.title || '';
+  document.getElementById('livePlatform').value = data.platform || 'youtube';
+  document.getElementById('liveUrl').value = data.embed_url || '';
+  document.getElementById('liveStatus').value = String(!!data.is_live);
+}
+async function saveLiveSettings(){
+  const title = document.getElementById('liveTitleInput').value.trim();
+  const platform = document.getElementById('livePlatform').value;
+  const embed_url = document.getElementById('liveUrl').value.trim();
+  const is_live = document.getElementById('liveStatus').value === 'true';
+  const {error} = await supa.from('live_settings').update({title, platform, embed_url, is_live, updated_at:new Date().toISOString()}).eq('id',1);
+  if(error){ toast('Error: '+error.message); return; }
+  toast('Live settings saved!');
+  loadLiveSettings();
+}
+
+async function loadAdminDonations(){
+  const {data} = await supa.from('donations').select('*, profiles(full_name)').order('created_at',{ascending:false}).limit(30);
+  const el = document.getElementById('adminDonationsList');
+  if(!data || data.length===0){ el.innerHTML='<div class="empty-state">No donations recorded yet.</div>'; return; }
+  el.innerHTML = data.map(d=>`
+    <div class="list-item">
+      <div class="info"><h5>₦${Number(d.amount).toLocaleString()} — ${escapeHtml(d.purpose)}</h5><p>${escapeHtml(d.profiles?.full_name||'Member')} · ${new Date(d.created_at).toLocaleString()}</p></div>
+      <div class="toggle-pill on">${escapeHtml(d.status)}</div>
+    </div>`).join('');
+}
+
+async function deleteRow(table, id, cb){
+  if(!confirm('Delete this item?')) return;
+  const {error} = await supa.from(table).delete().eq('id', id);
+  if(error){ toast('Error: '+error.message); return; }
+  toast('Deleted.');
+  cb();
+  loadEvents(); loadAnnouncements(); loadGivingAccounts(); loadProjects();
+}
+async function toggleActive(table, id, current, cb){
+  const {error} = await supa.from(table).update({is_active: !current}).eq('id', id);
+  if(error){ toast('Error: '+error.message); return; }
+  cb();
+  loadGivingAccounts(); loadProjects();
+}
+
+/* ---------------- UTIL ---------------- */
+function escapeHtml(str){
+  if(str===null||str===undefined) return '';
+  return String(str).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+</script>
+</body>
+</html>
