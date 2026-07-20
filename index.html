@@ -135,6 +135,11 @@ main{max-width:960px;margin:0 auto;padding:24px 18px 100px;}
 
 /* CHAT: GROUP LIST (WhatsApp-style) */
 .chat-list-item{display:flex;align-items:center;gap:14px;background:var(--ink-2);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:10px;}
+.chat-join-btn{padding:8px 14px;border-radius:20px;font-size:11.5px;font-weight:700;flex-shrink:0;white-space:nowrap;}
+.chat-join-btn.open{background:var(--gold);color:var(--ink);}
+.chat-join-btn.request{background:var(--ink-3);color:var(--cream);border:1px solid var(--line);}
+.chat-join-btn.pending{background:transparent;color:var(--cream-dim);border:1px solid var(--line);}
+.chat-join-btn.member{background:transparent;color:var(--gold-light);border:1px solid var(--line);}
 .chat-avatar{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--ember));display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;font-size:18px;color:#fff;flex-shrink:0;}
 .chat-list-info{flex:1;min-width:0;}
 .chat-list-info h4{font-size:15px;color:var(--cream);margin-bottom:2px;}
@@ -170,7 +175,9 @@ main{max-width:960px;margin:0 auto;padding:24px 18px 100px;}
 
 /* PROFILE */
 .profile-header{display:flex;flex-direction:column;align-items:center;margin-bottom:20px;}
-.profile-avatar{width:84px;height:84px;border-radius:50%;background:linear-gradient(135deg,var(--gold-light),var(--purple));display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;font-size:30px;color:var(--ink);margin-bottom:10px;}
+.profile-avatar{width:84px;height:84px;border-radius:50%;background:linear-gradient(135deg,var(--gold-light),var(--purple));display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;font-size:30px;color:var(--ink);margin-bottom:10px;overflow:hidden;position:relative;}
+.profile-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.profile-avatar-edit{position:absolute;bottom:0;right:0;width:28px;height:28px;border-radius:50%;background:var(--gold);color:var(--ink);display:flex;align-items:center;justify-content:center;font-size:12px;border:2px solid var(--ink);}
 .profile-header h2{font-family:var(--font-display);font-size:22px;color:var(--cream);}
 .profile-header p{font-size:12.5px;color:var(--cream-dim);}
 
@@ -344,7 +351,11 @@ main{max-width:960px;margin:0 auto;padding:24px 18px 100px;}
     <!-- PROFILE -->
     <section class="page" id="page-profile">
       <div class="profile-header">
-        <div class="profile-avatar" id="profileAvatarInitial">?</div>
+        <div class="profile-avatar" id="profileAvatarWrap" onclick="document.getElementById('avatarInput').click()" style="cursor:pointer;">
+          <span id="profileAvatarInitial">?</span>
+          <div class="profile-avatar-edit">✎</div>
+        </div>
+        <input type="file" id="avatarInput" accept="image/*" class="hidden" onchange="handleAvatarSelect(event)">
         <h2 id="profileName">—</h2>
         <p id="profileEmail">—</p>
       </div>
@@ -458,14 +469,32 @@ main{max-width:960px;margin:0 auto;padding:24px 18px 100px;}
           <div class="card-title">Create New Group</div>
           <div class="field"><label>Group Name</label><input type="text" id="grName" class="admin-input" placeholder="e.g. Youth Fellowship"></div>
           <div class="field"><label>Description (optional)</label><input type="text" id="grDesc" class="admin-input"></div>
+          <div class="field">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+              <input type="checkbox" id="grIsOpen" style="width:16px;height:16px;">
+              Open group — anyone can join instantly (no approval needed)
+            </label>
+          </div>
           <button class="btn-primary" onclick="createGroup()">Create Group</button>
         </div>
+
+        <div class="card">
+          <div class="card-title">🔔 Pending Join Requests</div>
+          <div id="adminJoinRequestsList"><div class="empty-state">Loading…</div></div>
+        </div>
+
         <div class="card">
           <div class="card-title">All Groups</div>
           <div id="adminGroupsList"><div class="empty-state">Loading…</div></div>
         </div>
         <div class="card hidden" id="manageGroupCard">
           <div class="card-title">Manage: <span id="manageGroupName"></span></div>
+          <div class="field">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+              <input type="checkbox" id="manageGroupOpenToggle" style="width:16px;height:16px;" onchange="toggleGroupOpen()">
+              Open group — anyone can join instantly
+            </label>
+          </div>
           <div id="manageGroupMembers"></div>
           <div class="field" style="margin-top:14px;">
             <label>Add a member</label>
@@ -750,24 +779,65 @@ async function loadLiveSettings(){
 
 /* ---------------- CHAT (WhatsApp-style private groups) ---------------- */
 let myGroupsCache = [];
+let myMembershipIds = [];
+let myPendingRequestIds = [];
+
 async function loadMyGroups(){
   const el = document.getElementById('chatGroupsList');
-  el.innerHTML = '<div class="empty-state">Loading your groups…</div>';
-  const {data, error} = await supa.from('chat_groups').select('*, group_members(count)').order('created_at',{ascending:false});
-  if(error || !data || data.length===0){
-    el.innerHTML = '<div class="empty-state">You are not in any groups yet. Ask the admin to add you to one.</div>';
+  el.innerHTML = '<div class="empty-state">Loading groups…</div>';
+
+  const [{data: groups, error}, {data: myMemberships}, {data: myRequests}] = await Promise.all([
+    supa.from('chat_groups').select('*, group_members(count)').order('created_at',{ascending:false}),
+    supa.from('group_members').select('group_id').eq('user_id', currentUser.id),
+    supa.from('group_join_requests').select('group_id').eq('user_id', currentUser.id)
+  ]);
+
+  if(error || !groups || groups.length===0){
+    el.innerHTML = '<div class="empty-state">No groups yet. Check back once the admin creates one.</div>';
     return;
   }
-  myGroupsCache = data;
-  el.innerHTML = data.map(g=>`
-    <div class="chat-list-item" onclick="openGroup('${g.id}')">
+  myGroupsCache = groups;
+  myMembershipIds = (myMemberships||[]).map(m=>m.group_id);
+  myPendingRequestIds = (myRequests||[]).map(r=>r.group_id);
+
+  el.innerHTML = groups.map(g=>{
+    const memberCount = g.group_members?.[0]?.count || 0;
+    const isMember = myMembershipIds.includes(g.id);
+    const isPending = myPendingRequestIds.includes(g.id);
+    let actionBtn;
+    if(isMember){
+      actionBtn = `<span class="chat-join-btn member">Open</span>`;
+    } else if(g.is_open){
+      actionBtn = `<button class="chat-join-btn open" onclick="event.stopPropagation();joinOpenGroup('${g.id}')">Join</button>`;
+    } else if(isPending){
+      actionBtn = `<span class="chat-join-btn pending">Requested</span>`;
+    } else {
+      actionBtn = `<button class="chat-join-btn request" onclick="event.stopPropagation();requestToJoin('${g.id}')">Request to Join</button>`;
+    }
+    return `<div class="chat-list-item" onclick="${isMember ? `openGroup('${g.id}')` : ''}" style="${isMember?'cursor:pointer;':''}">
       <div class="chat-avatar">${initials(g.name)}</div>
       <div class="chat-list-info">
         <h4>${escapeHtml(g.name)}</h4>
-        <p>${escapeHtml(g.description || (g.group_members?.[0]?.count ? g.group_members[0].count + ' members' : 'Tap to open'))}</p>
+        <p>${escapeHtml(g.description || (memberCount ? memberCount + ' members' : 'No members yet'))}</p>
       </div>
-      <div class="chat-list-arrow">›</div>
-    </div>`).join('');
+      ${actionBtn}
+    </div>`;
+  }).join('');
+}
+
+async function joinOpenGroup(groupId){
+  const {error} = await supa.from('group_members').insert({group_id: groupId, user_id: currentUser.id});
+  if(error){ toast('Could not join: '+error.message); return; }
+  toast('Joined! Opening chat…');
+  await loadMyGroups();
+  openGroup(groupId);
+}
+
+async function requestToJoin(groupId){
+  const {error} = await supa.from('group_join_requests').insert({group_id: groupId, user_id: currentUser.id});
+  if(error){ toast('Could not send request: '+error.message); return; }
+  toast('Request sent — admin will review it.');
+  loadMyGroups();
 }
 
 function openGroup(groupId){
@@ -911,11 +981,40 @@ async function handleImageSelect(event){
 /* ---------------- PROFILE ---------------- */
 function loadProfilePage(){
   if(!currentProfile) return;
-  document.getElementById('profileAvatarInitial').textContent = initials(currentProfile.full_name);
+  const initialEl = document.getElementById('profileAvatarInitial');
+  const wrap = document.getElementById('profileAvatarWrap');
+  const existingImg = wrap.querySelector('img');
+  if(existingImg) existingImg.remove();
+  if(currentProfile.avatar_url){
+    initialEl.classList.add('hidden');
+    const img = document.createElement('img');
+    img.src = currentProfile.avatar_url;
+    img.alt = 'Profile photo';
+    wrap.insertBefore(img, wrap.firstChild);
+  } else {
+    initialEl.classList.remove('hidden');
+    initialEl.textContent = initials(currentProfile.full_name);
+  }
   document.getElementById('profileName').textContent = currentProfile.full_name || 'Member';
   document.getElementById('profileEmail').textContent = currentUser?.email || '';
   document.getElementById('profileFullName').value = currentProfile.full_name || '';
   document.getElementById('profilePhone').value = currentProfile.phone || '';
+}
+
+async function handleAvatarSelect(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  toast('Uploading photo…');
+  const path = `${currentUser.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.\-_]/g,'')}`;
+  const {error: uploadErr} = await supa.storage.from('avatars').upload(path, file);
+  if(uploadErr){ toast('Upload failed: ' + uploadErr.message); return; }
+  const { data: urlData } = supa.storage.from('avatars').getPublicUrl(path);
+  const {error} = await supa.from('profiles').update({avatar_url: urlData.publicUrl}).eq('id', currentUser.id);
+  if(error){ toast('Failed to save photo: ' + error.message); return; }
+  currentProfile.avatar_url = urlData.publicUrl;
+  loadProfilePage();
+  toast('Profile photo updated!');
+  event.target.value = '';
 }
 
 async function saveProfile(){
@@ -1068,23 +1167,25 @@ async function saveLiveSettings(){
 async function createGroup(){
   const name = document.getElementById('grName').value.trim();
   const description = document.getElementById('grDesc').value.trim();
+  const is_open = document.getElementById('grIsOpen').checked;
   if(!name){ toast('Group name required.'); return; }
-  const {data, error} = await supa.from('chat_groups').insert({name, description, created_by: currentUser.id}).select().single();
+  const {data, error} = await supa.from('chat_groups').insert({name, description, is_open, created_by: currentUser.id}).select().single();
   if(error){ toast('Error: '+error.message); return; }
   await supa.from('group_members').insert({group_id: data.id, user_id: currentUser.id});
-  document.getElementById('grName').value=''; document.getElementById('grDesc').value='';
+  document.getElementById('grName').value=''; document.getElementById('grDesc').value=''; document.getElementById('grIsOpen').checked=false;
   toast('Group created!');
   loadAdminGroups();
 }
 
 let adminGroupsCache = [];
 async function loadAdminGroups(){
-  const {data} = await supa.from('chat_groups').select('*, group_members(count)').order('created_at',{ascending:false});
+  const {data, error} = await supa.from('chat_groups').select('*, group_members(count)').order('created_at',{ascending:false});
+  if(error){ toast('Could not load groups: '+error.message); }
   adminGroupsCache = data || [];
   const el = document.getElementById('adminGroupsList');
   el.innerHTML = (data||[]).map(g=>`
     <div class="list-item">
-      <div class="info"><h5>${escapeHtml(g.name)}</h5><p>${g.group_members?.[0]?.count || 0} members</p></div>
+      <div class="info"><h5>${escapeHtml(g.name)} ${g.is_open ? '<span class="toggle-pill on">Open</span>' : ''}</h5><p>${g.group_members?.[0]?.count || 0} members</p></div>
       <div>
         <button class="mini-btn gold" onclick="manageGroup('${g.id}')">Manage</button>
         <button class="mini-btn danger" onclick="deleteGroup('${g.id}')">Delete</button>
@@ -1092,8 +1193,42 @@ async function loadAdminGroups(){
     </div>`).join('') || '<div class="empty-state">No groups yet — create one above.</div>';
 
   // cache all profiles for the "add member" dropdown
-  const {data: profs} = await supa.from('profiles').select('id, full_name').order('full_name');
+  const {data: profs, error: profErr} = await supa.from('profiles').select('id, full_name').order('full_name');
+  if(profErr){ toast('Could not load member list: '+profErr.message); }
   allProfilesCache = profs || [];
+
+  loadAdminJoinRequests();
+}
+
+async function loadAdminJoinRequests(){
+  const el = document.getElementById('adminJoinRequestsList');
+  const {data, error} = await supa.from('group_join_requests').select('id, group_id, user_id, requested_at, profiles(full_name), chat_groups(name)').order('requested_at',{ascending:true});
+  if(error){ el.innerHTML = `<div class="empty-state">Could not load requests: ${escapeHtml(error.message)}</div>`; return; }
+  if(!data || data.length===0){ el.innerHTML = '<div class="empty-state">No pending requests.</div>'; return; }
+  el.innerHTML = data.map(r=>`
+    <div class="list-item">
+      <div class="info"><h5>${escapeHtml(r.profiles?.full_name || 'Member')}</h5><p>wants to join "${escapeHtml(r.chat_groups?.name || 'a group')}"</p></div>
+      <div>
+        <button class="mini-btn gold" onclick="approveJoinRequest('${r.id}','${r.group_id}','${r.user_id}')">Approve</button>
+        <button class="mini-btn danger" onclick="rejectJoinRequest('${r.id}')">Reject</button>
+      </div>
+    </div>`).join('');
+}
+
+async function approveJoinRequest(requestId, groupId, userId){
+  const {error: memErr} = await supa.from('group_members').insert({group_id: groupId, user_id: userId});
+  if(memErr && !memErr.message.includes('duplicate')){ toast('Error: '+memErr.message); return; }
+  await supa.from('group_join_requests').delete().eq('id', requestId);
+  toast('Request approved!');
+  loadAdminGroups();
+  if(adminSelectedGroupId === groupId) refreshManageGroupMembers();
+}
+
+async function rejectJoinRequest(requestId){
+  const {error} = await supa.from('group_join_requests').delete().eq('id', requestId);
+  if(error){ toast('Error: '+error.message); return; }
+  toast('Request rejected.');
+  loadAdminJoinRequests();
 }
 
 async function deleteGroup(id){
@@ -1111,13 +1246,23 @@ async function manageGroup(groupId){
   adminSelectedGroupId = groupId;
   document.getElementById('manageGroupCard').classList.remove('hidden');
   document.getElementById('manageGroupName').textContent = groupName;
+  document.getElementById('manageGroupOpenToggle').checked = !!group?.is_open;
   await refreshManageGroupMembers();
 }
 
+async function toggleGroupOpen(){
+  const isOpen = document.getElementById('manageGroupOpenToggle').checked;
+  const {error} = await supa.from('chat_groups').update({is_open: isOpen}).eq('id', adminSelectedGroupId);
+  if(error){ toast('Error: '+error.message); return; }
+  toast(isOpen ? 'Group is now open to everyone.' : 'Group now requires a join request.');
+  loadAdminGroups();
+}
+
 async function refreshManageGroupMembers(){
-  const {data: members} = await supa.from('group_members').select('user_id, profiles(full_name)').eq('group_id', adminSelectedGroupId);
-  const memberIds = (members||[]).map(m=>m.user_id);
+  const {data: members, error} = await supa.from('group_members').select('user_id, profiles(full_name)').eq('group_id', adminSelectedGroupId);
   const el = document.getElementById('manageGroupMembers');
+  if(error){ el.innerHTML = `<div class="empty-state">Could not load members: ${escapeHtml(error.message)}</div>`; return; }
+  const memberIds = (members||[]).map(m=>m.user_id);
   el.innerHTML = (members||[]).map(m=>`
     <div class="member-chip">
       <span>${escapeHtml(m.profiles?.full_name || 'Member')}</span>
